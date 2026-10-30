@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kim's Family</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-center p-0 sm:p-4">
+
+    <!-- 알림 토스트 배너 -->
+    <div id="toast" class="fixed top-5 z-50 transform -translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-medium tracking-wide">
+        <span id="toast-message">알림 메시지</span>
+    </div>
+
+    <!-- 로그인 비밀번호 변경 모달 -->
+    <div id="password-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl space-y-4 border border-slate-100">
+            <h3 class="font-semibold text-slate-900 text-sm">로그인 비밀번호 변경</h3>
+            <p class="text-[11px] text-slate-500">현재 로그인된 계정의 로그인 비밀번호를 변경합니다.</p>
+            <div>
+                <label class="block text-[10px] font-medium text-slate-500 mb-1">새 로그인 비밀번호</label>
+                <input type="password" id="new-pin-input" placeholder="새 비밀번호 입력" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-800 transition">
+            </div>
+            <div class="flex space-x-2 pt-1">
+                <button onclick="closePasswordModal()" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl text-xs font-medium hover:bg-slate-200 transition">취소</button>
+                <button onclick="saveNewPassword()" class="flex-1 bg-slate-900 text-white py-2.5 rounded-xl text-xs font-medium hover:bg-slate-800 transition">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- '자기 방' 입장 보안 잠금 모달 -->
+    <div id="vault-auth-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl space-y-4 text-center border border-slate-100">
+            <h3 class="font-semibold text-slate-900 text-sm pt-2">자기 방 보안 인증</h3>
+            <p class="text-[11px] text-slate-500">자기 방 입장을 위해 비밀번호를 입력해주세요.<br>(기본 비밀번호: 1234)</p>
+            <div>
+                <input type="password" id="vault-auth-pin" placeholder="자기 방 비밀번호 입력" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-center outline-none focus:border-slate-800 transition">
+            </div>
+            <div class="flex space-x-2 pt-1">
+                <button onclick="closeVaultAuth()" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl text-xs font-medium hover:bg-slate-200 transition">취소</button>
+                <button onclick="verifyVaultAuth()" class="flex-1 bg-slate-900 text-white py-2.5 rounded-xl text-xs font-medium hover:bg-slate-800 transition">입장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- '자기 방' 비밀번호 변경 모달 -->
+    <div id="vault-password-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl space-y-4 border border-slate-100">
+            <h3 class="font-semibold text-slate-900 text-sm">자기 방 비밀번호 변경</h3>
+            <p class="text-[11px] text-slate-500">오직 본인만 아는 자기 방 전용 비밀번호를 설정합니다.</p>
+            <div>
+                <label class="block text-[10px] font-medium text-slate-500 mb-1">새 자기 방 비밀번호</label>
+                <input type="password" id="new-vault-pin-input" placeholder="새 비밀번호 입력" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-800 transition">
+            </div>
+            <div class="flex space-x-2 pt-1">
+                <button onclick="closeVaultPasswordModal()" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl text-xs font-medium hover:bg-slate-200 transition">취소</button>
+                <button onclick="saveNewVaultPassword()" class="flex-1 bg-slate-900 text-white py-2.5 rounded-xl text-xs font-medium hover:bg-slate-800 transition">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 애플리케이션 컨테이너 -->
+    <div id="app" class="max-w-md mx-auto w-full bg-white min-h-screen sm:min-h-[920px] sm:rounded-3xl sm:border sm:border-slate-200/80 shadow-xl flex flex-col relative overflow-hidden">
+
+        <!-- [화면 1] 로그인 화면 -->
+        <div id="login-screen" class="flex flex-col justify-between px-6 py-5 flex-grow bg-white">
+            
+            <!-- 1. 상단 타이틀 영역 -->
+            <div class="text-center pt-1">
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">Kim's Family</h1>
+                <p class="text-xs text-slate-400 mt-0.5">프로필을 선택한 후 로그인하세요</p>
+            </div>
+
+            <!-- 2. 최상단으로 이동된 상하 2장 대표 사진 영역 -->
+            <div class="space-y-3 w-full my-3">
+                <!-- 가족 대표 사진 1 (상단) -->
+                <div class="relative w-full h-40 bg-slate-100 rounded-2xl flex flex-col items-center justify-center text-xs text-slate-400 overflow-hidden border-2 border-slate-200 cursor-pointer group shadow-xs" onclick="triggerMainPhotoUpload(1)" title="가족 대표 사진 1 변경">
+                    <img id="family-main-photo-1-preview" class="w-full h-full object-cover hidden">
+                    <div id="family-main-photo-1-placeholder" class="flex flex-col items-center justify-center space-y-1">
+                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="font-medium text-[11px] text-slate-500">가족 사진 1 등록</span>
+                    </div>
+                    <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[11px] font-medium">사진 1 변경</div>
+                </div>
+
+                <!-- 가족 대표 사진 2 (하단) -->
+                <div class="relative w-full h-40 bg-slate-100 rounded-2xl flex flex-col items-center justify-center text-xs text-slate-400 overflow-hidden border-2 border-slate-200 cursor-pointer group shadow-xs" onclick="triggerMainPhotoUpload(2)" title="가족 대표 사진 2 변경">
+                    <img id="family-main-photo-2-preview" class="w-full h-full object-cover hidden">
+                    <div id="family-main-photo-2-placeholder" class="flex flex-col items-center justify-center space-y-1">
+                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="font-medium text-[11px] text-slate-500">가족 사진 2 등록</span>
+                    </div>
+                    <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[11px] font-medium">사진 2 변경</div>
+                </div>
+            </div>
+            <!-- 숨겨진 대표 사진 업로드 파일 인풋 -->
+            <input type="file" id="family-main-photo-input" accept="image/*" onchange="uploadFamilyMainPhoto(event)" class="hidden">
+
+            <!-- 3. 하단 프로필 및 로그인 영역 -->
+            <div class="space-y-3 w-full">
+                <!-- 4인 가로 방향 프로필 배열 -->
+                <div class="flex justify-between space-x-2 w-full">
+                    <!-- 아빠 -->
+                    <div onclick="selectLoginUser('아빠')" id="profile-아빠" class="profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-100 hover:border-slate-900 bg-slate-50/50 cursor-pointer transition">
+                        <div class="relative w-11 h-11 bg-slate-200 rounded-full overflow-hidden mb-1 flex items-center justify-center text-[10px] text-slate-500 group">
+                            <img id="img-profile-아빠" class="w-full h-full object-cover hidden">
+                            <span id="text-profile-아빠" class="font-medium">아빠</span>
+                            <div onclick="event.stopPropagation(); triggerPhotoUpload('아빠')" class="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition flex items-center justify-center text-white text-[8px]">변경</div>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-800">아빠</span>
+                    </div>
+
+                    <!-- 엄마 -->
+                    <div onclick="selectLoginUser('엄마')" id="profile-엄마" class="profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-100 hover:border-slate-900 bg-slate-50/50 cursor-pointer transition">
+                        <div class="relative w-11 h-11 bg-slate-200 rounded-full overflow-hidden mb-1 flex items-center justify-center text-[10px] text-slate-500 group">
+                            <img id="img-profile-엄마" class="w-full h-full object-cover hidden">
+                            <span id="text-profile-엄마" class="font-medium">엄마</span>
+                            <div onclick="event.stopPropagation(); triggerPhotoUpload('엄마')" class="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition flex items-center justify-center text-white text-[8px]">변경</div>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-800">엄마</span>
+                    </div>
+
+                    <!-- 딸 -->
+                    <div onclick="selectLoginUser('딸')" id="profile-딸" class="profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-100 hover:border-slate-900 bg-slate-50/50 cursor-pointer transition">
+                        <div class="relative w-11 h-11 bg-slate-200 rounded-full overflow-hidden mb-1 flex items-center justify-center text-[10px] text-slate-500 group">
+                            <img id="img-profile-딸" class="w-full h-full object-cover hidden">
+                            <span id="text-profile-딸" class="font-medium">딸</span>
+                            <div onclick="event.stopPropagation(); triggerPhotoUpload('딸')" class="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition flex items-center justify-center text-white text-[8px]">변경</div>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-800">딸</span>
+                    </div>
+
+                    <!-- 아들 -->
+                    <div onclick="selectLoginUser('아들')" id="profile-아들" class="profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-100 hover:border-slate-900 bg-slate-50/50 cursor-pointer transition">
+                        <div class="relative w-11 h-11 bg-slate-200 rounded-full overflow-hidden mb-1 flex items-center justify-center text-[10px] text-slate-500 group">
+                            <img id="img-profile-아들" class="w-full h-full object-cover hidden">
+                            <span id="text-profile-아들" class="font-medium">아들</span>
+                            <div onclick="event.stopPropagation(); triggerPhotoUpload('아들')" class="absolute inset-0 bg-slate-900/50 opacity-0 hover:opacity-100 transition flex items-center justify-center text-white text-[8px]">변경</div>
+                        </div>
+                        <span class="text-[11px] font-semibold text-slate-800">아들</span>
+                    </div>
+                </div>
+                <input type="file" id="profile-photo-input" accept="image/*" onchange="saveProfilePhoto(event)" class="hidden">
+
+                <!-- 프로필 선택 후 나타나는 비밀번호 입력 및 로그인 영역 -->
+                <div id="login-auth-box" class="w-full space-y-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 hidden">
+                    <div class="text-center text-xs font-medium text-slate-600">
+                        <span id="selected-profile-name" class="font-bold text-slate-900"></span> 계정 로그인
+                    </div>
+                    <div>
+                        <input type="password" id="user-pin" placeholder="비밀번호 입력 (기본: 1234)" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-center text-slate-800 bg-white focus:border-slate-800 outline-none transition">
+                    </div>
+                    <button onclick="handleLogin()" class="w-full bg-slate-900 text-white py-2.5 rounded-xl text-xs font-semibold hover:bg-slate-800 transition shadow-sm">
+                        입장하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 하단 여백 채우기용 공간 -->
+            <div class="pb-1"></div>
+        </div>
+
+        <!-- [화면 2] 메인 대시보드 -->
+        <div id="main-screen" class="hidden flex flex-col flex-grow bg-slate-50/50">
+            <!-- 상단 헤더 -->
+            <header class="bg-white border-b border-slate-200 px-4 py-3.5 flex justify-between items-center sticky top-0 z-20">
+                <div class="flex items-center space-x-2">
+                    <span id="current-user-badge" class="bg-slate-100 text-slate-700 text-[11px] px-2.5 py-1 rounded-md font-semibold">아빠</span>
+                    <h2 class="font-bold text-xs text-slate-900 tracking-tight">Kim's Family</h2>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <button onclick="openPasswordModal()" title="로그인 비밀번호 변경" class="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg transition border border-slate-200">설정</button>
+                    <button onclick="exportData()" title="데이터 백업" class="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg transition border border-slate-200">백업</button>
+                    <label title="데이터 복원" class="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg transition border border-slate-200 cursor-pointer">
+                        복원 <input type="file" id="import-file" accept=".json" onchange="importData(event)" class="hidden">
+                    </label>
+                    <button onclick="handleLogout()" class="text-[11px] text-slate-400 hover:text-slate-700 px-1">나가기</button>
+                </div>
+            </header>
+
+            <!-- 탭 네비게이션 -->
+            <div class="flex border-b border-slate-200 bg-white">
+                <button onclick="switchTab('feed')" id="tab-feed-btn" class="flex-1 py-3 text-xs font-semibold text-slate-900 border-b-2 border-slate-900 transition">Family Talk</button>
+                <button onclick="switchTab('calendar')" id="tab-calendar-btn" class="flex-1 py-3 text-xs font-medium text-slate-400 transition">가족 캘린더</button>
+                <button onclick="checkVaultAccess()" id="tab-vault-btn" class="flex-1 py-3 text-xs font-medium text-slate-400 transition">자기 방</button>
+            </div>
+
+            <!-- 콘텐츠 영역 -->
+            <div class="flex-grow overflow-y-auto p-4 space-y-4 pb-24">
+                
+                <!-- 1. Family Talk 탭 -->
+                <div id="tab-feed-content" class="space-y-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                        <textarea id="feed-input" placeholder="오늘 가족과 나누고 싶은 이야기를 남겨보세요." class="w-full p-3 text-xs border border-slate-200 bg-white rounded-xl text-slate-800 placeholder-slate-400 focus:border-slate-800 outline-none resize-none h-24 transition"></textarea>
+                        
+                        <div id="feed-img-preview-container" class="hidden relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200">
+                            <img id="feed-img-preview" class="w-full h-full object-cover">
+                            <button onclick="removeFeedImage()" class="absolute top-0.5 right-0.5 bg-slate-900/70 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">×</button>
+                        </div>
+
+                        <div id="feed-audio-preview-container" class="hidden flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <div class="flex items-center space-x-2 text-[11px] text-slate-700 font-medium">
+                                <audio id="feed-audio-preview" controls class="h-7"></audio>
+                            </div>
+                            <button onclick="removeFeedAudio()" class="text-slate-400 hover:text-slate-700 text-[11px]">삭제</button>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-1">
+                            <div class="flex items-center space-x-1.5">
+                                <label class="cursor-pointer text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                                    사진 <input type="file" id="feed-image-input" accept="image/*" onchange="previewFeedImage(event)" class="hidden">
+                                </label>
+                                <button type="button" onclick="toggleRecord('feed')" id="feed-rec-btn" class="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                                    음성녹음
+                                </button>
+                            </div>
+                            <button onclick="saveFeed()" id="feed-submit-btn" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-medium transition">등록</button>
+                        </div>
+                    </div>
+                    <div id="feed-list" class="space-y-3"></div>
+                </div>
+
+                <!-- 2. 가족 캘린더 탭 -->
+                <div id="tab-calendar-content" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                        <h3 class="font-semibold text-xs text-slate-900">가족 일정 등록</h3>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-1">유형</label>
+                                <select id="cal-type" onchange="toggleCalType()" class="w-full p-2.5 text-xs border border-slate-200 bg-white rounded-xl outline-none text-slate-700">
+                                    <option value="normal">일회성 일정</option>
+                                    <option value="annual">매년 반복 (생일/기념일)</option>
+                                </select>
+                            </div>
+                            <div id="cal-date-wrap">
+                                <label class="block text-[10px] text-slate-500 mb-1">날짜</label>
+                                <input type="date" id="cal-date" class="w-full p-2.5 text-xs border border-slate-200 bg-white rounded-xl outline-none">
+                            </div>
+                            <div id="cal-month-wrap" class="hidden">
+                                <label class="block text-[10px] text-slate-500 mb-1">월 / 일 반복</label>
+                                <div class="flex space-x-1">
+                                    <select id="cal-month" class="w-1/2 p-2.5 text-xs border border-slate-200 bg-white rounded-xl outline-none">
+                                        <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+                                    </select>
+                                    <select id="cal-day" class="w-1/2 p-2.5 text-xs border border-slate-200 bg-white rounded-xl outline-none">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <input type="text" id="cal-title" placeholder="일정 내용 입력" class="w-full p-3 text-xs border border-slate-200 bg-white rounded-xl outline-none">
+                        </div>
+
+                        <button onclick="saveCalendar()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-medium transition">일정 추가</button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <h4 class="font-semibold text-xs text-slate-500 px-1">다가오는 일정</h4>
+                        <div id="calendar-list" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- 3. 자기 방 탭 -->
+                <div id="tab-vault-content" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex justify-between items-center">
+                        <div>
+                            <h3 id="vault-user-title" class="font-semibold text-xs text-slate-900">자기 방</h3>
+                            <p class="text-[11px] text-slate-400">본인만 접근 가능한 개인 아카이브 공간입니다.</p>
+                        </div>
+                        <button onclick="openVaultPasswordModal()" class="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition">방 비밀번호 변경</button>
+                    </div>
+
+                    <!-- 생각 기록 박스 -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                        <h4 class="font-semibold text-xs text-slate-800">나의 생각 기록</h4>
+                        <input type="text" id="vault-title" placeholder="주제 (선택사항)" class="w-full p-3 text-xs border border-slate-200 bg-white rounded-xl outline-none">
+                        <textarea id="vault-input" placeholder="생각이나 가치관을 자유롭게 기록하세요." class="w-full p-3 text-xs border border-slate-200 bg-white rounded-xl text-slate-800 placeholder-slate-400 focus:border-slate-800 outline-none resize-none h-24 transition"></textarea>
+                        
+                        <div id="vault-img-preview-container" class="hidden relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200">
+                            <img id="vault-img-preview" class="w-full h-full object-cover">
+                            <button onclick="removeVaultImage()" class="absolute top-0.5 right-0.5 bg-slate-900/70 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">×</button>
+                        </div>
+
+                        <div id="vault-audio-preview-container" class="hidden flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                            <div class="flex items-center space-x-2 text-[11px] text-slate-700 font-medium">
+                                <audio id="vault-audio-preview" controls class="h-7"></audio>
+                            </div>
+                            <button onclick="removeVaultAudio()" class="text-slate-400 hover:text-slate-700 text-[11px]">삭제</button>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-1">
+                            <div class="flex items-center space-x-1.5">
+                                <label class="cursor-pointer text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                                    사진 <input type="file" id="vault-image-input" accept="image/*" onchange="previewVaultImage(event)" class="hidden">
+                                </label>
+                                <button type="button" onclick="toggleRecord('vault')" id="vault-rec-btn" class="text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition">
+                                    음성녹음
+                                </button>
+                            </div>
+                            <button onclick="saveVault()" id="vault-submit-btn" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-medium transition">보관</button>
+                        </div>
+                    </div>
+
+                    <!-- 인물 관계 기록 박스 -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                        <h4 class="font-semibold text-xs text-slate-800">인물 관계 기록</h4>
+                        <input type="text" id="relation-name" placeholder="인물 이름 및 관계" class="w-full p-3 text-xs border border-slate-200 bg-white rounded-xl outline-none">
+                        <textarea id="relation-desc" placeholder="기억하고 싶은 특징이나 에피소드를 적어보세요." class="w-full p-3 text-xs border border-slate-200 bg-white rounded-xl text-slate-800 placeholder-slate-400 outline-none resize-none h-20"></textarea>
+                        <button onclick="saveRelation()" id="relation-submit-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-xs font-medium transition">인물 관계 저장</button>
+                    </div>
+
+                    <!-- 리스트 출력 영역 -->
+                    <div class="space-y-4">
+                        <h4 class="font-semibold text-xs text-slate-500 px-1">기록된 생각</h4>
+                        <div id="vault-list" class="space-y-3"></div>
+
+                        <h4 class="font-semibold text-xs text-slate-500 px-1 pt-2">기록된 인물 관계</h4>
+                        <div id="relation-list" class="space-y-3"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 스크립트 로직 -->
+    <script>
+        let currentUser = null;
+        let selectedLoginUser = null;
+        let photoTargetUser = null;
+        let mainPhotoTargetIndex = 1;
+        let editingFeedIndex = null;
+        let editingVaultIndex = null;
+        let editingRelationIndex = null;
+
+        let currentFeedImage = null;
+        let currentFeedAudio = null;
+        let currentVaultImage = null;
+        let currentVaultAudio = null;
+
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let activeRecordTarget = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const daySelect = document.getElementById('cal-day');
+            for(let i=1; i<=31; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${i}일`;
+                daySelect.appendChild(opt);
+            }
+
+            // 가족 대표 사진 1, 2 불러오기
+            [1, 2].forEach(idx => {
+                const savedPhoto = localStorage.getItem(`family_main_photo_${idx}`);
+                if (savedPhoto) {
+                    const imgEl = document.getElementById(`family-main-photo-${idx}-preview`);
+                    const placeholderEl = document.getElementById(`family-main-photo-${idx}-placeholder`);
+                    if (imgEl && placeholderEl) {
+                        imgEl.src = savedPhoto;
+                        imgEl.classList.remove('hidden');
+                        placeholderEl.classList.add('hidden');
+                    }
+                }
+            });
+
+            // 등록된 프로필 사진들 불러오기
+            const profiles = ['아빠', '엄마', '딸', '아들'];
+            profiles.forEach(name => {
+                const savedPhoto = localStorage.getItem(`profile_photo_${name}`);
+                if (savedPhoto) {
+                    const imgEl = document.getElementById(`img-profile-${name}`);
+                    const textEl = document.getElementById(`text-profile-${name}`);
+                    if (imgEl && textEl) {
+                        imgEl.src = savedPhoto;
+                        imgEl.classList.remove('hidden');
+                        textEl.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        // 가족 대표 사진 업로드 트리거
+        function triggerMainPhotoUpload(index) {
+            mainPhotoTargetIndex = index;
+            document.getElementById('family-main-photo-input').click();
+        }
+
+        function uploadFamilyMainPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const base64 = e.target.result;
+                    localStorage.setItem(`family_main_photo_${mainPhotoTargetIndex}`, base64);
+                    
+                    const imgEl = document.getElementById(`family-main-photo-${mainPhotoTargetIndex}-preview`);
+                    const placeholderEl = document.getElementById(`family-main-photo-${mainPhotoTargetIndex}-placeholder`);
+                    if (imgEl && placeholderEl) {
+                        imgEl.src = base64;
+                        imgEl.classList.remove('hidden');
+                        placeholderEl.classList.add('hidden');
+                    }
+                    showToast(`가족 대표 사진 ${mainPhotoTargetIndex}이(가) 등록되었습니다.`);
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 개별 프로필 사진 업로드 트리거
+        function triggerPhotoUpload(name) {
+            photoTargetUser = name;
+            document.getElementById('profile-photo-input').click();
+        }
+
+        function saveProfilePhoto(event) {
+            const file = event.target.files[0];
+            if (file && photoTargetUser) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const base64 = e.target.result;
+                    localStorage.setItem(`profile_photo_${photoTargetUser}`, base64);
+                    
+                    const imgEl = document.getElementById(`img-profile-${photoTargetUser}`);
+                    const textEl = document.getElementById(`text-profile-${photoTargetUser}`);
+                    if (imgEl && textEl) {
+                        imgEl.src = base64;
+                        imgEl.classList.remove('hidden');
+                        textEl.classList.add('hidden');
+                    }
+                    showToast(`${photoTargetUser}의 프로필 사진이 등록되었습니다.`);
+                    photoTargetUser = null;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 로그인 프로필 선택
+        function selectLoginUser(name) {
+            selectedLoginUser = name;
+            
+            // 모든 카드 테두리 초기화 후 선택된 카드 강조
+            ['아빠', '엄마', '딸', '아들'].forEach(n => {
+                const card = document.getElementById(`profile-${n}`);
+                if (card) {
+                    if (n === name) {
+                        card.className = 'profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-900 bg-slate-100 cursor-pointer transition scale-105 shadow-sm';
+                    } else {
+                        card.className = 'profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-100 hover:border-slate-400 bg-slate-50/50 cursor-pointer transition';
+                    }
+                }
+            });
+
+            document.getElementById('selected-profile-name').textContent = name;
+            document.getElementById('login-auth-box').classList.remove('hidden');
+            document.getElementById('user-pin').value = '';
+            document.getElementById('user-pin').focus();
+        }
+
+        let passwords = JSON.parse(localStorage.getItem('family_passwords')) || {
+            '아빠': '1234', '엄마': '1234', '딸': '1234', '아들': '1234'
+        };
+
+        let vaultPasswords = JSON.parse(localStorage.getItem('family_vault_passwords')) || {
+            '아빠': '1234', '엄마': '1234', '딸': '1234', '아들': '1234'
+        };
+
+        let feeds = JSON.parse(localStorage.getItem('family_feeds')) || [
+            { author: '엄마', text: '날씨가 좋아 정원에 물을 주었습니다. 저녁에 뵙겠습니다.', time: '10/30 10:15', image: null, audio: null }
+        ];
+
+        let calendars = JSON.parse(localStorage.getItem('family_calendars')) || [
+            { type: 'annual', month: 12, day: 25, title: '크리스마스' },
+            { type: 'normal', date: '2026-11-05', title: '가족 모임' }
+        ];
+
+        let vaults = JSON.parse(localStorage.getItem('family_vaults')) || {
+            '아빠': [{ title: '기본 원칙', text: '묵묵히 내 길을 걸어간다.', time: '2026-10-29', image: null, audio: null }],
+            '엄마': [], '딸': [], '아들': []
+        };
+
+        let relations = JSON.parse(localStorage.getItem('family_relations')) || {
+            '아빠': [{ name: '친구 철수', desc: '30년 지기 친구.', time: '2026-10-29' }],
+            '엄마': [], '딸': [], '아들': []
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            
+            toast.classList.remove('-translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function handleLogin() {
+            if (!selectedLoginUser) {
+                alert('로그인할 가족 프로필을 선택해주세요.');
+                return;
+            }
+            const pin = document.getElementById('user-pin').value;
+            const correctPin = passwords[selectedLoginUser] || '1234';
+
+            if (pin !== correctPin) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            currentUser = selectedLoginUser;
+            document.getElementById('current-user-badge').textContent = `${currentUser}`;
+
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+
+            renderFeed();
+            renderCalendar();
+            showToast(`${currentUser}님 환영합니다.`);
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            selectedLoginUser = null;
+            document.getElementById('user-pin').value = '';
+            document.getElementById('login-auth-box').classList.add('hidden');
+            
+            // 프로필 선택 테두리 리셋
+            ['아빠', '엄마', '딸', '아들'].forEach(n => {
+                const card = document.getElementById(`profile-${n}`);
+                if (card) card.className = 'profile-card flex-1 flex flex-col items-center p-2 rounded-2xl border-2 border-slate-100 hover:border-slate-400 bg-slate-50/50 cursor-pointer transition';
+            });
+
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+
+        function openPasswordModal() {
+            document.getElementById('new-pin-input').value = '';
+            document.getElementById('password-modal').classList.remove('hidden');
+        }
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+        }
+        function saveNewPassword() {
+            const newPin = document.getElementById('new-pin-input').value.trim();
+            if (!newPin) { alert('비밀번호를 입력해주세요.'); return; }
+            passwords[currentUser] = newPin;
+            localStorage.setItem('family_passwords', JSON.stringify(passwords));
+            closePasswordModal();
+            showToast('로그인 비밀번호가 변경되었습니다.');
+        }
+
+        // 자기 방 입장 보안 인증
+        function checkVaultAccess() {
+            document.getElementById('vault-auth-pin').value = '';
+            document.getElementById('vault-auth-modal').classList.remove('hidden');
+        }
+        function closeVaultAuth() {
+            document.getElementById('vault-auth-modal').classList.add('hidden');
+        }
+        function verifyVaultAuth() {
+            const pin = document.getElementById('vault-auth-pin').value;
+            const correctVaultPin = vaultPasswords[currentUser] || '1234';
+
+            if (pin !== correctVaultPin) {
+                alert('자기 방 비밀번호가 틀렸습니다.');
+                return;
+            }
+
+            closeVaultAuth();
+            switchTab('vault');
+            showToast('자기 방에 입장했습니다.');
+        }
+
+        // 자기 방 비밀번호 변경 모달
+        function openVaultPasswordModal() {
+            document.getElementById('new-vault-pin-input').value = '';
+            document.getElementById('vault-password-modal').classList.remove('hidden');
+        }
+        function closeVaultPasswordModal() {
+            document.getElementById('vault-password-modal').classList.add('hidden');
+        }
+        function saveNewVaultPassword() {
+            const newPin = document.getElementById('new-vault-pin-input').value.trim();
+            if (!newPin) { alert('새 비밀번호를 입력해주세요.'); return; }
+            vaultPasswords[currentUser] = newPin;
+            localStorage.setItem('family_vault_passwords', JSON.stringify(vaultPasswords));
+            closeVaultPasswordModal();
+            showToast('자기 방 비밀번호가 변경되었습니다.');
+        }
+
+        function switchTab(tab) {
+            const feedBtn = document.getElementById('tab-feed-btn');
+            const calBtn = document.getElementById('tab-calendar-btn');
+            const vaultBtn = document.getElementById('tab-vault-btn');
+            const feedContent = document.getElementById('tab-feed-content');
+            const calContent = document.getElementById('tab-calendar-content');
+            const vaultContent = document.getElementById('tab-vault-content');
+
+            feedBtn.className = 'flex-1 py-3 text-xs font-medium text-slate-400 transition';
+            calBtn.className = 'flex-1 py-3 text-xs font-medium text-slate-400 transition';
+            vaultBtn.className = 'flex-1 py-3 text-xs font-medium text-slate-400 transition';
+            feedContent.classList.add('hidden');
+            calContent.classList.add('hidden');
+            vaultContent.classList.add('hidden');
+
+            if (tab === 'feed') {
+                feedBtn.className = 'flex-1 py-3 text-xs font-semibold text-slate-900 border-b-2 border-slate-900 transition';
+                feedContent.classList.remove('hidden');
+            } else if (tab === 'calendar') {
+                calBtn.className = 'flex-1 py-3 text-xs font-semibold text-slate-900 border-b-2 border-slate-900 transition';
+                calContent.classList.remove('hidden');
+            } else if (tab === 'vault') {
+                vaultBtn.className = 'flex-1 py-3 text-xs font-semibold text-slate-900 border-b-2 border-slate-900 transition';
+                vaultContent.classList.remove('hidden');
+                document.getElementById('vault-user-title').textContent = `${currentUser}의 자기 방`;
+                renderVault();
+                renderRelation();
+            }
+        }
+
+        function toggleRecord(target) {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                activeRecordTarget = target;
+
+                const btn = document.getElementById(`${target}-rec-btn`);
+                btn.textContent = '녹음 중지';
+                btn.className = 'text-[11px] bg-red-600 text-white px-3 py-1.5 rounded-lg transition animate-pulse';
+
+                mediaRecorder.ondataavailable = event => { audioChunks.push(event.data); };
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        const base64Audio = e.target.result;
+                        if (activeRecordTarget === 'feed') {
+                            currentFeedAudio = base64Audio;
+                            document.getElementById('feed-audio-preview').src = currentFeedAudio;
+                            document.getElementById('feed-audio-preview-container').classList.remove('hidden');
+                        } else {
+                            currentVaultAudio = base64Audio;
+                            document.getElementById('vault-audio-preview').src = currentVaultAudio;
+                            document.getElementById('vault-audio-preview-container').classList.remove('hidden');
+                        }
+                        showToast('녹음이 완료되었습니다.');
+                    };
+                    reader.readAsDataURL(audioBlob);
+
+                    btn.textContent = '음성녹음';
+                    btn.className = 'text-[11px] bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition';
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                mediaRecorder.start();
+            }).catch(err => { alert('마이크 권한을 확인해주세요.'); });
+        }
+
+        function previewFeedImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    currentFeedImage = e.target.result;
+                    document.getElementById('feed-img-preview').src = currentFeedImage;
+                    document.getElementById('feed-img-preview-container').classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+        function removeFeedImage() {
+            currentFeedImage = null;
+            document.getElementById('feed-image-input').value = '';
+            document.getElementById('feed-img-preview-container').classList.add('hidden');
+        }
+        function removeFeedAudio() {
+            currentFeedAudio = null;
+            document.getElementById('feed-audio-preview-container').classList.add('hidden');
+        }
+
+        function previewVaultImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    currentVaultImage = e.target.result;
+                    document.getElementById('vault-img-preview').src = currentVaultImage;
+                    document.getElementById('vault-img-preview-container').classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+        function removeVaultImage() {
+            currentVaultImage = null;
+            document.getElementById('vault-image-input').value = '';
+            document.getElementById('vault-img-preview-container').classList.add('hidden');
+        }
+        function removeVaultAudio() {
+            currentVaultAudio = null;
+            document.getElementById('vault-audio-preview-container').classList.add('hidden');
+        }
+
+        function saveFeed() {
+            const text = document.getElementById('feed-input').value.trim();
+            if (!text && !currentFeedImage && !currentFeedAudio) return;
+
+            const now = new Date();
+            const timeStr = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+            if (editingFeedIndex !== null) {
+                feeds[editingFeedIndex].text = text;
+                if (currentFeedImage) feeds[editingFeedIndex].image = currentFeedImage;
+                if (currentFeedAudio) feeds[editingFeedIndex].audio = currentFeedAudio;
+                editingFeedIndex = null;
+                document.getElementById('feed-submit-btn').textContent = '등록';
+                showToast('수정되었습니다.');
+            } else {
+                feeds.unshift({ author: currentUser, text, time: timeStr, image: currentFeedImage, audio: currentFeedAudio });
+                showToast('등록되었습니다.');
+            }
+
+            localStorage.setItem('family_feeds', JSON.stringify(feeds));
+            document.getElementById('feed-input').value = '';
+            removeFeedImage();
+            removeFeedAudio();
+            renderFeed();
+        }
+
+        function editFeed(index) {
+            const f = feeds[index];
+            if (f.author !== currentUser) { alert('작성자만 수정할 수 있습니다.'); return; }
+            document.getElementById('feed-input').value = f.text;
+            editingFeedIndex = index;
+            document.getElementById('feed-submit-btn').textContent = '수정';
+            if (f.image) {
+                currentFeedImage = f.image;
+                document.getElementById('feed-img-preview').src = currentFeedImage;
+                document.getElementById('feed-img-preview-container').classList.remove('hidden');
+            }
+            if (f.audio) {
+                currentFeedAudio = f.audio;
+                document.getElementById('feed-audio-preview').src = currentFeedAudio;
+                document.getElementById('feed-audio-preview-container').classList.remove('hidden');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteFeed(index) {
+            if (feeds[index].author !== currentUser) { alert('작성자만 삭제할 수 있습니다.'); return; }
+            if (confirm('삭제하시겠습니까?')) {
+                feeds.splice(index, 1);
+                localStorage.setItem('family_feeds', JSON.stringify(feeds));
+                renderFeed();
+                showToast('삭제되었습니다.');
+            }
+        }
+
+        function renderFeed() {
+            const listEl = document.getElementById('feed-list');
+            if (feeds.length === 0) { listEl.innerHTML = `<div class="text-center py-12 text-xs text-slate-400">등록된 내용이 없습니다.</div>`; return; }
+            listEl.innerHTML = feeds.map((f, i) => `
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-xs text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded">${f.author}</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] text-slate-400">${f.time}</span>
+                            ${f.author === currentUser ? `<button onclick="editFeed(${i})" class="text-[10px] text-slate-500">수정</button><button onclick="deleteFeed(${i})" class="text-[10px] text-red-500">삭제</button>` : ''}
+                        </div>
+                    </div>
+                    ${f.text ? `<p class="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">${f.text}</p>` : ''}
+                    ${f.image ? `<div class="rounded-xl overflow-hidden mt-2 max-h-60 border border-slate-100"><img src="${f.image}" class="w-full object-cover"></div>` : ''}
+                    ${f.audio ? `<div class="mt-2"><audio controls src="${f.audio}" class="w-full h-8"></audio></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function toggleCalType() {
+            const type = document.getElementById('cal-type').value;
+            if (type === 'annual') {
+                document.getElementById('cal-date-wrap').classList.add('hidden');
+                document.getElementById('cal-month-wrap').classList.remove('hidden');
+            } else {
+                document.getElementById('cal-date-wrap').classList.remove('hidden');
+                document.getElementById('cal-month-wrap').classList.add('hidden');
+            }
+        }
+
+        function saveCalendar() {
+            const type = document.getElementById('cal-type').value;
+            const title = document.getElementById('cal-title').value.trim();
+            if (!title) { alert('일정 내용을 입력해주세요.'); return; }
+
+            let newCal = { type, title };
+            if (type === 'annual') {
+                newCal.month = parseInt(document.getElementById('cal-month').value);
+                newCal.day = parseInt(document.getElementById('cal-day').value);
+            } else {
+                const date = document.getElementById('cal-date').value;
+                if (!date) { alert('날짜를 선택해주세요.'); return; }
+                newCal.date = date;
+            }
+
+            calendars.push(newCal);
+            localStorage.setItem('family_calendars', JSON.stringify(calendars));
+            document.getElementById('cal-title').value = '';
+            renderCalendar();
+            showToast('일정이 추가되었습니다.');
+        }
+
+        function deleteCalendar(index) {
+            calendars.splice(index, 1);
+            localStorage.setItem('family_calendars', JSON.stringify(calendars));
+            renderCalendar();
+            showToast('일정이 삭제되었습니다.');
+        }
+
+        function renderCalendar() {
+            const listEl = document.getElementById('calendar-list');
+            if (calendars.length === 0) { listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">등록된 일정이 없습니다.</div>`; return; }
+
+            const today = new Date();
+            const currentYear = today.getFullYear();
+
+            let processedList = calendars.map((c, i) => {
+                let targetDate;
+                let displayDateStr;
+                let badgeText;
+
+                if (c.type === 'annual') {
+                    targetDate = new Date(currentYear, c.month - 1, c.day);
+                    if (targetDate < today) {
+                        targetDate = new Date(currentYear + 1, c.month - 1, c.day);
+                    }
+                    displayDateStr = `${targetDate.getFullYear()}.${c.month}.${c.day} (매년)`;
+                    badgeText = `반복`;
+                } else {
+                    targetDate = new Date(c.date);
+                    displayDateStr = c.date;
+                    badgeText = `일반`;
+                }
+                return { ...c, targetDate, displayDateStr, badgeText, originalIndex: i };
+            });
+
+            processedList.sort((a, b) => a.targetDate - b.targetDate);
+
+            listEl.innerHTML = processedList.map((c) => `
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-xs">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">${c.badgeText}</span>
+                            <span class="text-[11px] text-slate-400">${c.displayDateStr}</span>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-800 pt-0.5">${c.title}</p>
+                    </div>
+                    <button onclick="deleteCalendar(${c.originalIndex})" class="text-[11px] text-slate-400 hover:text-red-500">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        function saveVault() {
+            const title = document.getElementById('vault-title').value.trim();
+            const text = document.getElementById('vault-input').value.trim();
+            if (!text && !currentVaultImage && !currentVaultAudio) return;
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+            if (!vaults[currentUser]) vaults[currentUser] = [];
+
+            if (editingVaultIndex !== null) {
+                vaults[currentUser][editingVaultIndex].title = title || '기록';
+                vaults[currentUser][editingVaultIndex].text = text;
+                if (currentVaultImage) vaults[currentUser][editingVaultIndex].image = currentVaultImage;
+                if (currentVaultAudio) vaults[currentUser][editingVaultIndex].audio = currentVaultAudio;
+                editingVaultIndex = null;
+                document.getElementById('vault-submit-btn').textContent = '보관';
+                showToast('수정되었습니다.');
+            } else {
+                vaults[currentUser].unshift({ title: title || '기록', text, time: dateStr, image: currentVaultImage, audio: currentVaultAudio });
+                showToast('보관되었습니다.');
+            }
+
+            localStorage.setItem('family_vaults', JSON.stringify(vaults));
+            document.getElementById('vault-title').value = '';
+            document.getElementById('vault-input').value = '';
+            removeVaultImage();
+            removeVaultAudio();
+            renderVault();
+        }
+
+        function editVault(index) {
+            const v = vaults[currentUser][index];
+            document.getElementById('vault-title').value = v.title;
+            document.getElementById('vault-input').value = v.text;
+            editingVaultIndex = index;
+            document.getElementById('vault-submit-btn').textContent = '수정';
+            if (v.image) {
+                currentVaultImage = v.image;
+                document.getElementById('vault-img-preview').src = currentVaultImage;
+                document.getElementById('vault-img-preview-container').classList.remove('hidden');
+            }
+            if (v.audio) {
+                currentVaultAudio = v.audio;
+                document.getElementById('vault-audio-preview').src = currentVaultAudio;
+                document.getElementById('vault-audio-preview-container').classList.remove('hidden');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteVault(index) {
+            if (confirm('삭제하시겠습니까?')) {
+                vaults[currentUser].splice(index, 1);
+                localStorage.setItem('family_vaults', JSON.stringify(vaults));
+                renderVault();
+                showToast('삭제되었습니다.');
+            }
+        }
+
+        function renderVault() {
+            const listEl = document.getElementById('vault-list');
+            const userVaults = vaults[currentUser] || [];
+            if (userVaults.length === 0) { listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">기록된 내용이 없습니다.</div>`; return; }
+            listEl.innerHTML = userVaults.map((v, i) => `
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-xs text-slate-800">${v.title}</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] text-slate-400">${v.time}</span>
+                            <button onclick="editVault(${i})" class="text-[10px] text-slate-500">수정</button>
+                            <button onclick="deleteVault(${i})" class="text-[10px] text-red-500">삭제</button>
+                        </div>
+                    </div>
+                    ${v.text ? `<p class="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">${v.text}</p>` : ''}
+                    ${v.image ? `<div class="rounded-xl overflow-hidden mt-2 max-h-60 border border-slate-100"><img src="${v.image}" class="w-full object-cover"></div>` : ''}
+                    ${v.audio ? `<div class="mt-2"><audio controls src="${v.audio}" class="w-full h-8"></audio></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function saveRelation() {
+            const name = document.getElementById('relation-name').value.trim();
+            const desc = document.getElementById('relation-desc').value.trim();
+            if (!name || !desc) { alert('이름과 내용을 모두 입력해주세요.'); return; }
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+            if (!relations[currentUser]) relations[currentUser] = [];
+
+            if (editingRelationIndex !== null) {
+                relations[currentUser][editingRelationIndex].name = name;
+                relations[currentUser][editingRelationIndex].desc = desc;
+                editingRelationIndex = null;
+                document.getElementById('relation-submit-btn').textContent = '인물 관계 저장';
+                showToast('수정되었습니다.');
+            } else {
+                relations[currentUser].unshift({ name, desc, time: dateStr });
+                showToast('저장되었습니다.');
+            }
+
+            localStorage.setItem('family_relations', JSON.stringify(relations));
+            document.getElementById('relation-name').value = '';
+            document.getElementById('relation-desc').value = '';
+            renderRelation();
+        }
+
+        function editRelation(index) {
+            const r = relations[currentUser][index];
+            document.getElementById('relation-name').value = r.name;
+            document.getElementById('relation-desc').value = r.desc;
+            editingRelationIndex = index;
+            document.getElementById('relation-submit-btn').textContent = '수정';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteRelation(index) {
+            if (confirm('삭제하시겠습니까?')) {
+                relations[currentUser].splice(index, 1);
+                localStorage.setItem('family_relations', JSON.stringify(relations));
+                renderRelation();
+                showToast('삭제되었습니다.');
+            }
+        }
+
+        function renderRelation() {
+            const listEl = document.getElementById('relation-list');
+            const userRelations = relations[currentUser] || [];
+            if (userRelations.length === 0) { listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">기록된 인물 관계가 없습니다.</div>`; return; }
+            listEl.innerHTML = userRelations.map((r, i) => `
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold text-xs text-slate-800">${r.name}</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] text-slate-400">${r.time}</span>
+                            <button onclick="editRelation(${i})" class="text-[10px] text-slate-500">수정</button>
+                            <button onclick="deleteRelation(${i})" class="text-[10px] text-red-500">삭제</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">${r.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        function exportData() {
+            const backupData = {
+                export_date: new Date().toISOString(),
+                passwords, vaultPasswords, feeds, calendars, vaults, relations
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Kims_Family_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('백업 파일이 다운로드되었습니다.');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.feeds && imported.vaults) {
+                        feeds = imported.feeds;
+                        vaults = imported.vaults;
+                        if (imported.calendars) calendars = imported.calendars;
+                        if (imported.relations) relations = imported.relations;
+                        if (imported.passwords) passwords = imported.passwords;
+                        if (imported.vaultPasswords) vaultPasswords = imported.vaultPasswords;
+
+                        localStorage.setItem('family_feeds', JSON.stringify(feeds));
+                        localStorage.setItem('family_vaults', JSON.stringify(vaults));
+                        localStorage.setItem('family_calendars', JSON.stringify(calendars));
+                        localStorage.setItem('family_relations', JSON.stringify(relations));
+                        localStorage.setItem('family_passwords', JSON.stringify(passwords));
+                        localStorage.setItem('family_vault_passwords', JSON.stringify(vaultPasswords));
+
+                        renderFeed();
+                        renderCalendar();
+                        showToast('데이터가 복원되었습니다.');
+                    } else {
+                        alert('올바르지 않은 백업 파일 형식입니다.');
+                    }
+                } catch (err) { alert('파일 읽기 오류'); }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
